@@ -70,7 +70,8 @@ public class BanglaTkInWord {
     }
 
     private static String convertDecimalPart(String decimalPart) {
-        String roundedDecimalPart = decimalPart.substring(0, Math.min(decimalPart.length(), 2));
+        int decimalPartStart = decimalPart.length() > 1 && decimalPart.charAt(0) == '0' ? 1 : 0;
+        String roundedDecimalPart = decimalPart.substring(decimalPartStart, Math.min(decimalPart.length(), 2));
         return ENGLISH_DIGIT_TO_BANGLA_TEXT_MAP.get(roundedDecimalPart);
     }
 
@@ -89,7 +90,6 @@ public class BanglaTkInWord {
 
     private static Map<String, String> createEnglishDigitToBanglaTextMap() {
         Map<String, String> englishDigitToBanglaTextMap = new HashMap<>();
-        englishDigitToBanglaTextMap.put("00", "শূন্য");
         englishDigitToBanglaTextMap.put("0", "শূন্য");
         englishDigitToBanglaTextMap.put("1", "এক");
         englishDigitToBanglaTextMap.put("2", "দুই");
