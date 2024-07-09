@@ -2,7 +2,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class BanglaTkInWord {
-    private static final Map<String, String> ENGLISH_DIGIT_TO_BANGLA_TEXT_MAP = createEnglishDigitToBanglaTextMap();
+    private static final Map<String, String> DIGIT_TO_BANGLA_TEXT_MAP = createEnglishDigitToBanglaTextMap();
+    private static final Map<String, String> DIGIT_TO_ENGLISH_TEXT_MAP = createEnglishDigitToEnglishTextMap();
+    private static final Map<Integer, String> ENGLISH_TK_GROUP_MAP = createEnglishTkGroupMap();
+    private static final Map<Integer, String> BANGLA_TK_GROUP_MAP = createBanglaTkGroupMap();
 
     private static final int CRORE_POSITION = 5;
     private static final int LAKH_POSITION = 3;
@@ -10,32 +13,64 @@ public class BanglaTkInWord {
     private static final int HUNDRED_POSITION = 0;
     private static final int UNIT_POSITION = -2;
 
-    public static String convertToBanglaTkInWord(String amount) {
+    public static String convertToEnglishTkInWord(BigDecimal amount) {
+        if (amount == null) {
+            return null;
+        }
+        String formattedAmount = amount.toString();
         StringBuilder result = new StringBuilder();
-        String[] parts = amount.split("\\.");
+        String[] parts = formattedAmount.split("\\.");
         String integerPart = parts[0];
 
         try {
-            result.append(convertIntegerPart(integerPart));
+            result.append(convertIntegerPart(integerPart, ENGLISH_TK_GROUP_MAP, DIGIT_TO_ENGLISH_TEXT_MAP));
 
-            result.append(" টাকা ");
+            result.append(" Taka ");
 
             if (parts.length > 1) {
                 String decimalPart = parts[1];
-                result.append(convertDecimalPart(decimalPart));
-                result.append(" পয়সা ");
+                result.append(convertDecimalPart(decimalPart, DIGIT_TO_ENGLISH_TEXT_MAP));
+                result.append(" Paisa ");
             }
 
-            result.append("মাত্র");
+            result.append("Only");
         } catch (Exception e) {
-            return amount;
+            return formattedAmount;
         }
 
         return removeRedundantSpace(result.toString());
     }
 
 
-    private static String convertIntegerPart(String integerPart) {
+    public static String convertToBanglaTkInWord(BigDecimal amount) {
+        if (amount == null) {
+            return null;
+        }
+        String formattedAmount = amount.toString();
+        StringBuilder result = new StringBuilder();
+        String[] parts = formattedAmount.split("\\.");
+        String integerPart = parts[0];
+
+        try {
+            result.append(convertIntegerPart(integerPart, BANGLA_TK_GROUP_MAP, DIGIT_TO_BANGLA_TEXT_MAP));
+
+            result.append(" টাকা ");
+
+            if (parts.length > 1) {
+                String decimalPart = parts[1];
+                result.append(convertDecimalPart(decimalPart, DIGIT_TO_BANGLA_TEXT_MAP));
+                result.append(" পয়সা ");
+            }
+
+            result.append("মাত্র");
+        } catch (Exception e) {
+            return formattedAmount;
+        }
+
+        return removeRedundantSpace(result.toString());
+    }
+
+    private static String convertIntegerPart(String integerPart, Map<Integer, String> groupMap, Map<String, String> digitToTextMap) {
         StringBuilder result = new StringBuilder();
         StringBuilder tempString = new StringBuilder();
 
@@ -50,34 +85,34 @@ public class BanglaTkInWord {
             }
 
             switch (positionInGroup) {
-                case CRORE_POSITION -> appendGroup(result, tempString, "কোটি", true);
-                case LAKH_POSITION -> appendGroup(result, tempString, "লক্ষ", false);
-                case THOUSAND_POSITION -> appendGroup(result, tempString, "হাজার", false);
-                case HUNDRED_POSITION -> appendGroup(result, tempString, "শত", false);
+                case CRORE_POSITION -> appendGroup(result, tempString, groupMap.get(CRORE_POSITION), digitToTextMap, true);
+                case LAKH_POSITION -> appendGroup(result, tempString, groupMap.get(LAKH_POSITION), digitToTextMap, false);
+                case THOUSAND_POSITION -> appendGroup(result, tempString, groupMap.get(THOUSAND_POSITION), digitToTextMap, false);
+                case HUNDRED_POSITION -> appendGroup(result, tempString, groupMap.get(HUNDRED_POSITION), digitToTextMap, false);
                 case UNIT_POSITION -> {
                     if (!tempString.isEmpty()) {
-                        result.append(ENGLISH_DIGIT_TO_BANGLA_TEXT_MAP.get(tempString.toString()));
+                        result.append(digitToTextMap.get(tempString.toString()));
                     }
                 }
             }
         }
 
         if (result.isEmpty()) {
-            result.append(ENGLISH_DIGIT_TO_BANGLA_TEXT_MAP.get("0"));
+            result.append(digitToTextMap.get("0"));
         }
 
         return result.toString();
     }
 
-    private static String convertDecimalPart(String decimalPart) {
+    private static String convertDecimalPart(String decimalPart, Map<String, String> digitToTextMap) {
         int decimalPartStart = decimalPart.length() > 1 && decimalPart.charAt(0) == '0' ? 1 : 0;
         String roundedDecimalPart = decimalPart.substring(decimalPartStart, Math.min(decimalPart.length(), 2));
-        return ENGLISH_DIGIT_TO_BANGLA_TEXT_MAP.get(roundedDecimalPart);
+        return digitToTextMap.get(roundedDecimalPart);
     }
 
-    private static void appendGroup(StringBuilder result, StringBuilder tempString, String groupText, boolean isCroreGroup) {
+    private static void appendGroup(StringBuilder result, StringBuilder tempString, String groupText, Map<String, String> digitToTextMap, boolean isCroreGroup) {
         if (!tempString.isEmpty()) {
-            result.append(ENGLISH_DIGIT_TO_BANGLA_TEXT_MAP.get(tempString.toString())).append(' ').append(groupText).append(' ');
+            result.append(digitToTextMap.get(tempString.toString())).append(' ').append(groupText).append(' ');
             tempString.setLength(0);
         } else if (isCroreGroup && !result.isEmpty()) {
             result.append(groupText).append(' ');
@@ -87,6 +122,69 @@ public class BanglaTkInWord {
     private static String removeRedundantSpace(String result) {
         return result.trim().replaceAll(" +", " ");
     }
+
+
+
+    private static String banglaMoneyFormatter(BigDecimal amount) {
+        if (amount == null) {
+            return null;
+        }
+        String formattedAmount = amount.setScale(2, RoundingMode.CEILING).toString();
+        return banglaMoneyCommaFormatter(formattedAmount);
+    }
+
+    private static String banglaMoneyCommaFormatter(String amount) {
+        StringBuilder result = new StringBuilder();
+        String[] parts = amount.split("\\.");
+        String integerPart = parts[0];
+
+        try {
+            for (int i = 0; i < integerPart.length(); i++) {
+                char c = integerPart.charAt(i);
+                result.append(c);
+
+                int positionFromRight = integerPart.length() - 1 - i;
+                int positionInGroup = positionFromRight % 7;
+                if (positionFromRight > 0 && positionInGroup == 0 || positionInGroup == 3 || positionInGroup == 5) {
+                    result.append(",");
+                }
+            }
+
+            // Add the decimal part if present
+            if (parts.length > 1) {
+                result.append(".").append(parts[1]);
+            }
+        } catch (Exception e) {
+            logger.error("Bangla money comma formatting failed with amount: {}", amount);
+            return amount;
+        }
+
+        return result.toString();
+    }
+
+    public static String formatToCommaSeparatedBanglaTk(BigDecimal amount) {
+        return NumberUtils.englishToBanglaDigitConversion(banglaMoneyFormatter(amount));
+    }
+
+    private static Map<Integer, String> createEnglishTkGroupMap() {
+        Map<Integer, String> englishTkGroupMap = new HashMap<>();
+        englishTkGroupMap.put(CRORE_POSITION, "Crore");
+        englishTkGroupMap.put(LAKH_POSITION, "Lakh");
+        englishTkGroupMap.put(THOUSAND_POSITION, "Thousand");
+        englishTkGroupMap.put(HUNDRED_POSITION, "Hundred");
+
+        return englishTkGroupMap;
+    }
+
+    private static Map<Integer, String> createBanglaTkGroupMap() {
+        Map<Integer, String> banglaTkGroupMap = new HashMap<>();
+        banglaTkGroupMap.put(CRORE_POSITION, "কোটি");
+        banglaTkGroupMap.put(LAKH_POSITION, "লক্ষ");
+        banglaTkGroupMap.put(THOUSAND_POSITION, "হাজার");
+        banglaTkGroupMap.put(HUNDRED_POSITION, "শত");
+        return banglaTkGroupMap;
+    }
+
 
     private static Map<String, String> createEnglishDigitToBanglaTextMap() {
         Map<String, String> englishDigitToBanglaTextMap = new HashMap<>();
@@ -193,4 +291,111 @@ public class BanglaTkInWord {
 
         return englishDigitToBanglaTextMap;
     }
+
+    private static Map<String, String> createEnglishDigitToEnglishTextMap() {
+        Map<String, String> englishDigitToEnglishTextMap = new HashMap<>();
+        englishDigitToEnglishTextMap.put("0", "Zero");
+        englishDigitToEnglishTextMap.put("1", "One");
+        englishDigitToEnglishTextMap.put("2", "Two");
+        englishDigitToEnglishTextMap.put("3", "Three");
+        englishDigitToEnglishTextMap.put("4", "Four");
+        englishDigitToEnglishTextMap.put("5", "Five");
+        englishDigitToEnglishTextMap.put("6", "Six");
+        englishDigitToEnglishTextMap.put("7", "Seven");
+        englishDigitToEnglishTextMap.put("8", "Eight");
+        englishDigitToEnglishTextMap.put("9", "Nine");
+        englishDigitToEnglishTextMap.put("10", "Ten");
+        englishDigitToEnglishTextMap.put("11", "Eleven");
+        englishDigitToEnglishTextMap.put("12", "Twelve");
+        englishDigitToEnglishTextMap.put("13", "Thirteen");
+        englishDigitToEnglishTextMap.put("14", "Fourteen");
+        englishDigitToEnglishTextMap.put("15", "Fifteen");
+        englishDigitToEnglishTextMap.put("16", "Sixteen");
+        englishDigitToEnglishTextMap.put("17", "Seventeen");
+        englishDigitToEnglishTextMap.put("18", "Eighteen");
+        englishDigitToEnglishTextMap.put("19", "Nineteen");
+        englishDigitToEnglishTextMap.put("20", "Twenty");
+        englishDigitToEnglishTextMap.put("21", "Twenty One");
+        englishDigitToEnglishTextMap.put("22", "Twenty Two");
+        englishDigitToEnglishTextMap.put("23", "Twenty Three");
+        englishDigitToEnglishTextMap.put("24", "Twenty Four");
+        englishDigitToEnglishTextMap.put("25", "Twenty Five");
+        englishDigitToEnglishTextMap.put("26", "Twenty Six");
+        englishDigitToEnglishTextMap.put("27", "Twenty Seven");
+        englishDigitToEnglishTextMap.put("28", "Twenty Eight");
+        englishDigitToEnglishTextMap.put("29", "Twenty Nine");
+        englishDigitToEnglishTextMap.put("30", "Thirty");
+        englishDigitToEnglishTextMap.put("31", "Thirty One");
+        englishDigitToEnglishTextMap.put("32", "Thirty Two");
+        englishDigitToEnglishTextMap.put("33", "Thirty Three");
+        englishDigitToEnglishTextMap.put("34", "Thirty Four");
+        englishDigitToEnglishTextMap.put("35", "Thirty Five");
+        englishDigitToEnglishTextMap.put("36", "Thirty Six");
+        englishDigitToEnglishTextMap.put("37", "Thirty Seven");
+        englishDigitToEnglishTextMap.put("38", "Thirty Eight");
+        englishDigitToEnglishTextMap.put("39", "Thirty Nine");
+        englishDigitToEnglishTextMap.put("40", "Forty");
+        englishDigitToEnglishTextMap.put("41", "Forty One");
+        englishDigitToEnglishTextMap.put("42", "Forty Two");
+        englishDigitToEnglishTextMap.put("43", "Forty Three");
+        englishDigitToEnglishTextMap.put("44", "Forty Four");
+        englishDigitToEnglishTextMap.put("45", "Forty Five");
+        englishDigitToEnglishTextMap.put("46", "Forty Six");
+        englishDigitToEnglishTextMap.put("47", "Forty Seven");
+        englishDigitToEnglishTextMap.put("48", "Forty Eight");
+        englishDigitToEnglishTextMap.put("49", "Forty Nine");
+        englishDigitToEnglishTextMap.put("50", "Fifty");
+        englishDigitToEnglishTextMap.put("51", "Fifty One");
+        englishDigitToEnglishTextMap.put("52", "Fifty Two");
+        englishDigitToEnglishTextMap.put("53", "Fifty Three");
+        englishDigitToEnglishTextMap.put("54", "Fifty Four");
+        englishDigitToEnglishTextMap.put("55", "Fifty Five");
+        englishDigitToEnglishTextMap.put("56", "Fifty Six");
+        englishDigitToEnglishTextMap.put("57", "Fifty Seven");
+        englishDigitToEnglishTextMap.put("58", "Fifty Eight");
+        englishDigitToEnglishTextMap.put("59", "Fifty Nine");
+        englishDigitToEnglishTextMap.put("60", "Sixty");
+        englishDigitToEnglishTextMap.put("61", "Sixty One");
+        englishDigitToEnglishTextMap.put("62", "Sixty Two");
+        englishDigitToEnglishTextMap.put("63", "Sixty Three");
+        englishDigitToEnglishTextMap.put("64", "Sixty Four");
+        englishDigitToEnglishTextMap.put("65", "Sixty Five");
+        englishDigitToEnglishTextMap.put("66", "Sixty Six");
+        englishDigitToEnglishTextMap.put("67", "Sixty Seven");
+        englishDigitToEnglishTextMap.put("68", "Sixty Eight");
+        englishDigitToEnglishTextMap.put("69", "Sixty Nine");
+        englishDigitToEnglishTextMap.put("70", "Seventy");
+        englishDigitToEnglishTextMap.put("71", "Seventy One");
+        englishDigitToEnglishTextMap.put("72", "Seventy Two");
+        englishDigitToEnglishTextMap.put("73", "Seventy Three");
+        englishDigitToEnglishTextMap.put("74", "Seventy Four");
+        englishDigitToEnglishTextMap.put("75", "Seventy Five");
+        englishDigitToEnglishTextMap.put("76", "Seventy Six");
+        englishDigitToEnglishTextMap.put("77", "Seventy Seven");
+        englishDigitToEnglishTextMap.put("78", "Seventy Eight");
+        englishDigitToEnglishTextMap.put("79", "Seventy Nine");
+        englishDigitToEnglishTextMap.put("80", "Eighty");
+        englishDigitToEnglishTextMap.put("81", "Eighty One");
+        englishDigitToEnglishTextMap.put("82", "Eighty Two");
+        englishDigitToEnglishTextMap.put("83", "Eighty Three");
+        englishDigitToEnglishTextMap.put("84", "Eighty Four");
+        englishDigitToEnglishTextMap.put("85", "Eighty Five");
+        englishDigitToEnglishTextMap.put("86", "Eighty Six");
+        englishDigitToEnglishTextMap.put("87", "Eighty Seven");
+        englishDigitToEnglishTextMap.put("88", "Eighty Eight");
+        englishDigitToEnglishTextMap.put("89", "Eighty Nine");
+        englishDigitToEnglishTextMap.put("90", "Ninety");
+        englishDigitToEnglishTextMap.put("91", "Ninety One");
+        englishDigitToEnglishTextMap.put("92", "Ninety Two");
+        englishDigitToEnglishTextMap.put("93", "Ninety Three");
+        englishDigitToEnglishTextMap.put("94", "Ninety Four");
+        englishDigitToEnglishTextMap.put("95", "Ninety Five");
+        englishDigitToEnglishTextMap.put("96", "Ninety Six");
+        englishDigitToEnglishTextMap.put("97", "Ninety Seven");
+        englishDigitToEnglishTextMap.put("98", "Ninety Eight");
+        englishDigitToEnglishTextMap.put("99", "Ninety Nine");
+
+        return englishDigitToEnglishTextMap;
+    }
+
 }
