@@ -1,7 +1,9 @@
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.Map;
 
-public class BanglaTkInWord {
+public class TkInWord {
     private static final Map<String, String> DIGIT_TO_BANGLA_TEXT_MAP = createEnglishDigitToBanglaTextMap();
     private static final Map<String, String> DIGIT_TO_ENGLISH_TEXT_MAP = createEnglishDigitToEnglishTextMap();
     private static final Map<Integer, String> ENGLISH_TK_GROUP_MAP = createEnglishTkGroupMap();
@@ -155,7 +157,7 @@ public class BanglaTkInWord {
                 result.append(".").append(parts[1]);
             }
         } catch (Exception e) {
-            logger.error("Bangla money comma formatting failed with amount: {}", amount);
+//            logger.error("Bangla money comma formatting failed with amount: {}", amount);
             return amount;
         }
 
