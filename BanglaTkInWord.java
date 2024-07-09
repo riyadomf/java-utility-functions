@@ -1,7 +1,7 @@
 import java.util.HashMap;
 import java.util.Map;
 
-public class BanglaTkInText {
+public class BanglaTkInWord {
     private static final Map<String, String> ENGLISH_DIGIT_TO_BANGLA_TEXT_MAP = createEnglishDigitToBanglaTextMap();
 
     private static final int CRORE_POSITION = 5;
@@ -10,7 +10,7 @@ public class BanglaTkInText {
     private static final int HUNDRED_POSITION = 0;
     private static final int UNIT_POSITION = -2;
 
-    private static String convertToBanglaTkInText(String amount) {
+    public static String convertToBanglaTkInWord(String amount) {
         StringBuilder result = new StringBuilder();
         String[] parts = amount.split("\\.");
         String integerPart = parts[0];
