@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class TkInWord {
+//    private static final Logger logger = LogManager.getLogger(MoneyUtils.class);
+
     private static final Map<String, String> DIGIT_TO_BANGLA_TEXT_MAP = createEnglishDigitToBanglaTextMap();
     private static final Map<String, String> DIGIT_TO_ENGLISH_TEXT_MAP = createEnglishDigitToEnglishTextMap();
     private static final Map<Integer, String> ENGLISH_TK_GROUP_MAP = createEnglishTkGroupMap();
@@ -15,7 +17,19 @@ public class TkInWord {
     private static final int HUNDRED_POSITION = 0;
     private static final int UNIT_POSITION = -2;
 
-    public static String convertToEnglishTkInWord(BigDecimal amount) {
+    private static final String ENGLISH_TAKA_TEXT = " Taka ";
+    private static final String ENGLISH_PAISA_TEXT = " Paisa ";
+    private static final String ENGLISH_ONLY_TEXT = "Only";
+    private static final String BANGLA_TAKA_TEXT = " টাকা ";
+    private static final String BANGLA_PAISA_TEXT = " পয়সা ";
+    private static final String BANGLA_ONLY_TEXT = "মাত্র";
+
+    public static String convertToTkInWordByLocale(BigDecimal amount, boolean isBangla) {
+        return isBangla ? convertToTkInWord(amount, BANGLA_TK_GROUP_MAP, DIGIT_TO_BANGLA_TEXT_MAP, BANGLA_TAKA_TEXT, BANGLA_PAISA_TEXT, BANGLA_ONLY_TEXT)
+                : convertToTkInWord(amount, ENGLISH_TK_GROUP_MAP, DIGIT_TO_ENGLISH_TEXT_MAP, ENGLISH_TAKA_TEXT, ENGLISH_PAISA_TEXT, ENGLISH_ONLY_TEXT);
+    }
+
+    private static String convertToTkInWord(BigDecimal amount, Map<Integer, String> groupMap, Map<String, String> digitToTextMap, String takaText, String paisaText, String onlyText) {
         if (amount == null) {
             return null;
         }
@@ -25,52 +39,33 @@ public class TkInWord {
         String integerPart = parts[0];
 
         try {
-            result.append(convertIntegerPart(integerPart, ENGLISH_TK_GROUP_MAP, DIGIT_TO_ENGLISH_TEXT_MAP));
+            String integerPartString = convertIntegerPart(integerPart, groupMap, digitToTextMap);
 
-            result.append(" Taka ");
+            if (!digitToTextMap.get("0").contentEquals(integerPartString)) {
+                result.append(integerPartString);
+                result.append(takaText);
+            }
 
             if (parts.length > 1) {
                 String decimalPart = parts[1];
-                result.append(convertDecimalPart(decimalPart, DIGIT_TO_ENGLISH_TEXT_MAP));
-                result.append(" Paisa ");
+                String decimalPartString = convertDecimalPart(decimalPart, digitToTextMap);
+                if (!digitToTextMap.get("0").contentEquals(decimalPartString)) {
+                    result.append(decimalPartString);
+                    result.append(paisaText);
+                }
             }
 
-            result.append("Only");
+            if (!result.isEmpty()) {
+                result.append(onlyText);
+            }
         } catch (Exception e) {
+//            logger.error("Error converting amount to words for amount: {}", amount, e);
             return formattedAmount;
         }
 
         return removeRedundantSpace(result.toString());
     }
 
-
-    public static String convertToBanglaTkInWord(BigDecimal amount) {
-        if (amount == null) {
-            return null;
-        }
-        String formattedAmount = amount.toString();
-        StringBuilder result = new StringBuilder();
-        String[] parts = formattedAmount.split("\\.");
-        String integerPart = parts[0];
-
-        try {
-            result.append(convertIntegerPart(integerPart, BANGLA_TK_GROUP_MAP, DIGIT_TO_BANGLA_TEXT_MAP));
-
-            result.append(" টাকা ");
-
-            if (parts.length > 1) {
-                String decimalPart = parts[1];
-                result.append(convertDecimalPart(decimalPart, DIGIT_TO_BANGLA_TEXT_MAP));
-                result.append(" পয়সা ");
-            }
-
-            result.append("মাত্র");
-        } catch (Exception e) {
-            return formattedAmount;
-        }
-
-        return removeRedundantSpace(result.toString());
-    }
 
     private static String convertIntegerPart(String integerPart, Map<Integer, String> groupMap, Map<String, String> digitToTextMap) {
         StringBuilder result = new StringBuilder();
@@ -126,7 +121,6 @@ public class TkInWord {
     }
 
 
-
     private static String banglaMoneyFormatter(BigDecimal amount) {
         if (amount == null) {
             return null;
@@ -157,7 +151,7 @@ public class TkInWord {
                 result.append(".").append(parts[1]);
             }
         } catch (Exception e) {
-//            logger.error("Bangla money comma formatting failed with amount: {}", amount);
+//            logger.error("Bangla money comma formatting failed with amount: {}", amount, e);
             return amount;
         }
 
