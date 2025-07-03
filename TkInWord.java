@@ -1,6 +1,8 @@
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.NumberFormat;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class TkInWord {
@@ -161,6 +163,135 @@ public class TkInWord {
     public static String formatToCommaSeparatedBanglaTk(BigDecimal amount) {
         return NumberUtils.englishToBanglaDigitConversion(banglaMoneyFormatter(amount));
     }
+
+
+
+    /**
+     * Formats a BigDecimal amount as a comma-separated money string,
+     * using Bangla or Western (US) formatting depending on the locale flag.
+     *
+     * @param amount   The amount to format
+     * @param isBangla True for Bangla style formatting; false for Western
+     * @return Formatted string representation of the amount
+     */
+    public static String formatCommaSeperatedMoneyByLocale(BigDecimal amount, boolean isBangla) {
+        if (amount == null) {
+            return null;
+        }
+
+        amount = amount.setScale(2, RoundingMode.HALF_UP);
+
+        if (isBangla) {
+            // Format in Bangla style (e.g., ৩,১৩,১২৩.২১)
+            String formattedAmount = commaSeperatedMoneyFormatter(amount.toString());
+            return NumberUtils.englishToBanglaDigitConversion(formattedAmount);
+        } else {
+            // Format in Western style (e.g., 123,456.78)
+            NumberFormat nf = NumberFormat.getNumberInstance(Locale.ENGLISH);
+            nf.setGroupingUsed(true);
+            nf.setMinimumFractionDigits(2);
+            nf.setMaximumFractionDigits(2);
+            return nf.format(amount);
+        }
+    }
+
+    /**
+     * Formats a number (non-currency) with comma separators and optional fractional digits.
+     * Supports both Bangla and Western style formatting.
+     *
+     * @param number            The number to format
+     * @param maxFractionDigits Max allowed decimal digits
+     * @param isBangla          True for Bangla style; false for Western
+     * @return Formatted number string
+     */
+    public static String formatCommaSeparatedNumberByLocale(BigDecimal number, int maxFractionDigits, boolean isBangla) {
+        if (number == null) {
+            return null;
+        }
+
+        number = number.setScale(maxFractionDigits, RoundingMode.HALF_UP);
+
+        if (isBangla) {
+            String[] parts = number.toPlainString().split("\\.");
+            String integerPart = commaSeperatedMoneyFormatter(parts[0]);
+            String formatted = formatFractionalPart(maxFractionDigits, parts, integerPart);
+            return NumberUtils.englishToBanglaDigitConversion(formatted);
+        } else {
+            NumberFormat nf = NumberFormat.getNumberInstance(Locale.US);
+            nf.setGroupingUsed(true);
+            nf.setMaximumFractionDigits(maxFractionDigits);
+            return nf.format(number);
+        }
+    }
+
+    /**
+     * Appends fractional part to a formatted integer part for Bangla style numbers.
+     * Removes trailing zeros, and omits decimal if not needed.
+     *
+     * @param maxFractionDigits Number of digits after decimal
+     * @param parts             Split number parts (before and after decimal)
+     * @param integerPart       Already-formatted integer part
+     * @return Final formatted number as string
+     */
+    private static String formatFractionalPart(int maxFractionDigits, String[] parts, String integerPart) {
+        if (maxFractionDigits == 0 || parts.length < 2) {
+            return integerPart;
+        }
+
+        StringBuilder decimalPart = new StringBuilder(parts[1]);
+
+        // Truncate or pad to required length
+        if (decimalPart.length() > maxFractionDigits) {
+            decimalPart.setLength(maxFractionDigits);
+        } else {
+            while (decimalPart.length() < maxFractionDigits) {
+                decimalPart.append("0");
+            }
+        }
+
+        // Trim trailing zeros
+        int i = decimalPart.length() - 1;
+        while (i >= 0 && decimalPart.charAt(i) == '0') {
+            i--;
+        }
+
+        if (i < 0) {
+            return integerPart;
+        }
+
+        return integerPart + "." + decimalPart.substring(0, i + 1);
+    }
+
+
+    private static String commaSeperatedMoneyFormatter(String amount) {
+        StringBuilder result = new StringBuilder();
+        String[] parts = amount.split("\\.");
+        String integerPart = parts[0];
+
+        try {
+            for (int i = 0; i < integerPart.length(); i++) {
+                char c = integerPart.charAt(i);
+                result.append(c);
+
+                int positionFromRight = integerPart.length() - 1 - i;
+                int positionInGroup = positionFromRight % 7;
+                if (positionFromRight > 0 && positionInGroup == 0 || positionInGroup == 3 || positionInGroup == 5) {
+                    result.append(",");
+                }
+            }
+
+            // Add the decimal part if present
+            if (parts.length > 1) {
+                result.append(".").append(parts[1]);
+            }
+        } catch (Exception e) {
+            return amount;
+        }
+
+        return result.toString();
+    }
+
+
 
     private static Map<Integer, String> createEnglishTkGroupMap() {
         Map<Integer, String> englishTkGroupMap = new HashMap<>();
